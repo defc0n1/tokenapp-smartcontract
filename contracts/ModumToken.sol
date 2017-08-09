@@ -82,6 +82,7 @@ contract ModumToken is ERC20Interface {
         require(!isProposalActive()); // no proposal is active
         require(_value <= lockedTokens); //proposal cannot be larger than remaining locked tokens
         require(_value > 0);            //proposal with 0 unlock are invalid
+        require(mintDone); //minting phase needs to be over
 
         uint _yay = 0;
         uint _nay = 0;
@@ -107,7 +108,6 @@ contract ModumToken is ERC20Interface {
     
     function claimProposal() {
         require(msg.sender == owner); //only owner can claim proposal
-        require(mintDone); //minting phase needs to be over
         require(isProposalActive()); // proposal active
         require(isVotingPhaseOver()); // voting has already ended
 
@@ -152,24 +152,38 @@ contract ModumToken is ERC20Interface {
     //to their token holders
     //Dividend payment / Airdrop
     function() payable {
+        require(mintDone); //minting needs to be over
+
         uint value = safeAdd(msg.value, rounding); //add old runding
         rounding = value % unlockedTokens; //ensure no rounding error
 		uint weiPerToken = safeDiv(safeSub(value, rounding), unlockedTokens);
         totalDropPerUnlockedToken = safeAdd(totalDropPerUnlockedToken, weiPerToken); //account for locked tokens and add the drop
 		Payout(weiPerToken);
 	}
-    
-    function getUnlockedTokens() constant returns (uint) {
-        return unlockedTokens;
+
+    function showBonus() constant returns (uint) {
+        uint bonus = safeSub(totalDropPerUnlockedToken, accounts[msg.sender].lastAirdropWei);
+        if(bonus != 0) {
+            return safeAdd(accounts[msg.sender].bonusWei, safeMul(bonus, accounts[msg.sender].valueMod));
+        }
+        return accounts[msg.sender].bonusWei;
     }
-    
-    function claimBonus() {
+
+    function claimBonus() returns (uint){
+        require(mintDone); //minting needs to be over
+
         Account storage account = getAccount(msg.sender, UpdateMode.Wei);
         uint sendValue = account.bonusWei; //fetch the values
         if(sendValue != 0){
             account.bonusWei = 0;           //set to zero (before against reentry) 
             msg.sender.transfer(sendValue); //send the bonus to the correct account
+            return sendValue;
         }
+        return 0;
+    }
+
+    function getUnlockedTokens() constant returns (uint) {
+        return unlockedTokens;
     }
     
     function totalSupply() constant returns (uint) {
@@ -180,7 +194,7 @@ contract ModumToken is ERC20Interface {
         return accounts[_owner].valueMod;
     }
     
-    function isVoteOngoing() internal returns (bool)  {
+    function isVoteOngoing() constant returns (bool)  {
         return isProposalActive()
             && now >= currentProposal.startTime
             && now < currentProposal.startTime + votingDuration;
@@ -188,11 +202,11 @@ contract ModumToken is ERC20Interface {
             //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
     }
 
-    function isProposalActive() internal returns (bool)  {
+    function isProposalActive() constant returns (bool)  {
         return currentProposal.valueMod > 0;
     }
 
-    function isVotingPhaseOver() internal returns (bool)  {
+    function isVotingPhaseOver() constant returns (bool)  {
         //no safeAdd as time is not set by the user, thus its safe to use it for longer periods:
         //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
         return now >= currentProposal.startTime + votingDuration;
@@ -208,9 +222,9 @@ contract ModumToken is ERC20Interface {
 		}
 		
 		if(mode == UpdateMode.Wei || mode == UpdateMode.Both){
-            uint bonus = safeSub(totalDropPerUnlockedToken,account.lastAirdropWei);
+            uint bonus = safeSub(totalDropPerUnlockedToken, account.lastAirdropWei);
             if(bonus != 0){
-    			account.bonusWei = safeAdd(account.bonusWei ,safeMul(bonus,account.valueMod));
+    			account.bonusWei = safeAdd(account.bonusWei, safeMul(bonus, account.valueMod));
     			account.lastAirdropWei = totalDropPerUnlockedToken;
     		}
 		}

@@ -26,6 +26,9 @@ This contract has 2 additions:
  wei per token. For a next payment e.g., 0.5 ETH (500'000'000'000'000'000 wei), the remainder 
  is added to 500'000'000'010'000'000. If any previous bonus payment has been done, the current
  wei per token is added to the previous one.
+ 
+ Anyone that has modum tokens and if a bonus payment has been made, can claim it via
+ `claimBonus()`. To check if there is a bonus, `showBonus()` can be called.
 
 * **Voting** A vote starts by the owner of the contract calling 
 `proposal(string _addr, bytes32 _hash, uint _value)`. The `addr` stores where the proposal
@@ -47,9 +50,20 @@ This contract has 2 additions:
  call `claimProposal()` in order to create new proposals. After the call, the proposal
  state is reset.
   
- 
 Since the voting and bonus payment are based on the number of tokens, it is important to 
 handle the case of increasing / decreasing tokens in order not to claim more bonus or
-voting rights...
+voting rights. For these cases, `getAccount(...)` is used to update the number of weis
+and voting rights. That means if a bonus has been payed of 1 wei per token at time 0 and
+time 1, a user gets 10 tokens, then the user should not get any weis. For every transfer
+the account of the sender and payer is updated and `getAccount(...)` is called with the
+current value. In the example above, `getAccount(...)` is called with the token amount of 0,
+the `lastAirdropWei` is updated and any subsequent call to `getAccount(...)` will result
+in 0 wei. If now a second time a bonus is payed with 2 wei per token, then if the user
+calls `getAccount(...)`, the `lastAirdropWei` does not match, and `account.bonusWei` is 
+updated to `10 x 2 = 20 wei`. If the user gets more token afterwards, `account.bonusWei`
+is already set and reflects the current tokens when the bonus way payed. A similar
+mechanism is implemented for voting, however, the update of the voting power is done
+only during the voting phase.
 
-Minting is done once, and bonus is calculated off-contract...
+Minting is done once, and once the minting flag 
+and bonus is calculated off-contract...
