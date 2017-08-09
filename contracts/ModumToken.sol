@@ -38,7 +38,7 @@ contract ModumToken is ERC20Interface {
     enum UpdateMode{None,Wei,Vote,Both}
 
 	struct Account {
-	    uint lastProposalStartBlockNr; //For checking at which proposal valueModVote was last updated 
+	    uint lastProposalStartTime; //For checking at which proposal valueModVote was last updated
 		uint lastAirdropWei; //For checking after which airDrop bonusWei was last updated 
 		uint bonusWei;      //airDrop/Dividend payout avaiable for withdrawl
 		uint valueModVote;  // votes avaiable for voting on active Proposal
@@ -53,7 +53,7 @@ contract ModumToken is ERC20Interface {
     uint maxTokens = 30 * 1000 * 1000;      //max distributable tokens
 
     bool mintDone = false;           //distinguisher for minting phase
-    uint votingDurationBlocks = 15 ;        //15x14s = 210s = 3.5min 
+    uint votingDuration = 2 weeks;
     
     string public constant name = "Modum Token";
     string public constant symbol = "MOD";
@@ -62,7 +62,7 @@ contract ModumToken is ERC20Interface {
         string addr;        //Uri for more info
         bytes32 hash;       //Hash of the uri content for checking 
         uint valueMod;      //token to unlock: proposal with 0 amount is invalid
-        uint startBlockNr;     
+        uint startTime;
         uint yay;   
         uint nay;
     }
@@ -76,19 +76,16 @@ contract ModumToken is ERC20Interface {
 	event Minted(address _addr, uint tokens);
 	event Voted(address _addr, bool option, uint votes);
 	event Payout(uint weiPerToken);
-
-    //TODO:DEBUG REMOVE
-    event logA(string s, address a);
-    event logB(string s, bool a);
     
     function proposal(string _addr, bytes32 _hash, uint _value) {
-        require(currentProposal.valueMod == 0); // no vote is ongoing
         require(msg.sender == owner); // proposal ony by onwer
-        require(lockedTokens >= _value); //proposal cannot be larger than remaining locked tokens
+        require(!isProposalActive()); // no proposal is active
+        require(_value <= lockedTokens); //proposal cannot be larger than remaining locked tokens
         require(_value > 0);            //proposal with 0 unlock are invalid
+
         uint _yay = 0;
         uint _nay = 0;
-        currentProposal = Proposal(_addr, _hash, _value, block.number, _yay, _nay);
+        currentProposal = Proposal(_addr, _hash, _value, now, _yay, _nay);
     }
     
     function vote(bool _vote) returns (uint) {
@@ -97,10 +94,10 @@ contract ModumToken is ERC20Interface {
         uint votes = account.valueModVote;  //avaiable votes
         require(votes > 0);  //voter must have a vote left
         
-        if(! _vote) {
-            currentProposal.nay = safeAdd(currentProposal.nay,votes);
-        } else {
+        if(_vote) {
             currentProposal.yay = safeAdd(currentProposal.yay,votes);
+        } else {
+            currentProposal.nay = safeAdd(currentProposal.nay,votes);
         }
         
         account.valueModVote = 0;
@@ -108,11 +105,12 @@ contract ModumToken is ERC20Interface {
         return votes;
     }
     
-    function claimProposal(){
-        require(mintDone); //minting phase needs to be over
+    function claimProposal() {
         require(msg.sender == owner); //only owner can claim proposal
-        require(currentProposal.valueMod > 0); // no proposal active
-        require(block.number > safeAdd(currentProposal.startBlockNr,votingDurationBlocks)); // voting has already ended
+        require(mintDone); //minting phase needs to be over
+        require(isProposalActive()); // proposal active
+        require(isVotingPhaseOver()); // voting has already ended
+
         if(currentProposal.yay > currentProposal.nay) {
             //It was accepted
             Account storage account = getAccount(owner, UpdateMode.Both);
@@ -123,24 +121,26 @@ contract ModumToken is ERC20Interface {
         }
         delete currentProposal; //proposal ended
     }
-    
-    //TODO: do a bulk version
-    function mint(address _recipient, uint _value)  {
+
+    function mint(address[] _recipient, uint[] _value)  {
         require(msg.sender == owner); //only owner can claim proposal
         require(!mintDone); //only during minting
-        require(safeAdd(totalSupply(),_value) <= maxTokens); //do not exceed max
-        Account storage account = getAccount(_recipient, UpdateMode.Both);
-        account.valueMod = safeAdd(account.valueMod,_value); //create the tokens and add to recipient
-        unlockedTokens = safeAdd(unlockedTokens,_value); //create tokens
-		Minted(_recipient, _value);
+        require(_recipient.length == _value.length); //input need to be of same size
+
+        for(uint16 i=0;i<_recipient.length;i++) {
+            require(safeAdd(totalSupply(),_value[i]) <= maxTokens); //do not exceed max
+
+            Account storage account = getAccount(_recipient[i], UpdateMode.Both);
+            account.valueMod = safeAdd(account.valueMod, _value[i]); //create the tokens and add to recipient
+            unlockedTokens = safeAdd(unlockedTokens, _value[i]); //create tokens
+		    Minted(_recipient[i], _value[i]);
+        }
     }
     
     function setMintDone() {
-        /* logA("1", msg.sender);
-        logA("2", owner);
-        logB("3", mintDone); */
         require(msg.sender == owner); //only owner
         require(!mintDone); //only in minting
+
         mintDone = true; //end the minting
     }
 
@@ -152,10 +152,10 @@ contract ModumToken is ERC20Interface {
     //to their token holders
     //Dividend payment / Airdrop
     function() payable {
-        uint value = safeAdd(msg.value,rounding); //add old runding
+        uint value = safeAdd(msg.value, rounding); //add old runding
         rounding = value % unlockedTokens; //ensure no rounding error
-		uint weiPerToken = safeDiv(safeSub(value,rounding),unlockedTokens);
-        totalDropPerUnlockedToken = safeAdd(totalDropPerUnlockedToken,weiPerToken); //account for locked tokens and add the drop
+		uint weiPerToken = safeDiv(safeSub(value, rounding), unlockedTokens);
+        totalDropPerUnlockedToken = safeAdd(totalDropPerUnlockedToken, weiPerToken); //account for locked tokens and add the drop
 		Payout(weiPerToken);
 	}
     
@@ -181,15 +181,29 @@ contract ModumToken is ERC20Interface {
     }
     
     function isVoteOngoing() internal returns (bool)  {
-        return currentProposal.valueMod != 0 && block.number >= currentProposal.startBlockNr && block.number < currentProposal.startBlockNr + votingDurationBlocks;
+        return isProposalActive()
+            && now >= currentProposal.startTime
+            && now < currentProposal.startTime + votingDuration;
+            //no safeAdd as time is not set by the user, thus its safe to use it for longer periods:
+            //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
+    }
+
+    function isProposalActive() internal returns (bool)  {
+        return currentProposal.valueMod > 0;
+    }
+
+    function isVotingPhaseOver() internal returns (bool)  {
+        //no safeAdd as time is not set by the user, thus its safe to use it for longer periods:
+        //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
+        return now >= currentProposal.startTime + votingDuration;
     }
     
 	function getAccount(address _addr, UpdateMode mode) internal returns(Account storage){        
         Account storage account = accounts[_addr];
 		if(mode == UpdateMode.Vote || mode == UpdateMode.Both){
-		    if(isVoteOngoing() && account.lastProposalStartBlockNr < currentProposal.startBlockNr) { // the user did set his token power yet
+		    if(isVoteOngoing() && account.lastProposalStartTime < currentProposal.startTime) { // the user did set his token power yet
                 account.valueModVote = account.valueMod;
-                account.lastProposalStartBlockNr = currentProposal.startBlockNr;
+                account.lastProposalStartTime = currentProposal.startTime;
             }
 		}
 		
@@ -206,6 +220,7 @@ contract ModumToken is ERC20Interface {
     
     function transfer(address _to, uint _value) returns (bool success) {
         require(mintDone);
+
         Account storage tmpFrom = getAccount(msg.sender, UpdateMode.None);
         if (tmpFrom.valueMod >= _value  && _value > 0){
                 Account storage from = getAccount(msg.sender, UpdateMode.Both);
@@ -220,6 +235,7 @@ contract ModumToken is ERC20Interface {
     
     function transferFrom(address _from, address _to, uint _value) returns (bool success) {
         require(mintDone);
+
         Account storage tmpFrom = getAccount(msg.sender, UpdateMode.None);
         if (tmpFrom.valueMod >= _value  && _value > 0 && allowed[_from][msg.sender] >= _value){
                 Account storage from = getAccount(msg.sender, UpdateMode.Both);

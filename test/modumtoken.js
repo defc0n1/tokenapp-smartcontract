@@ -17,11 +17,11 @@ contract('ModumToken', function (accounts) {
             return contract.balanceOf.call(accounts[0], {from: accounts[0]});
         }).then(function (balance) {
             assert.equal(balance.valueOf(), 0, "everything should be empty");
-            return contract.mint(accounts[0], 1000, {from: accounts[1]});
+            return contract.mint([accounts[0]], [1000], {from: accounts[1]});
         }).then(function (retVal) {
             assert.equal(false, "only owner can mint");
         }).catch(function (e) {
-            return contract.mint(accounts[0], 1000, {from: accounts[0]});
+            return contract.mint([accounts[0]], [1000], {from: accounts[0]});
         }).then(function (retVal) {
             return contract.balanceOf.call(accounts[0], {from: accounts[0]});
         }).then(function (balance) {
