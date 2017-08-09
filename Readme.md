@@ -1,5 +1,5 @@
 # TokenApp Smart Contract
-The testing framework is truffle and the goal is to test 
+The testing framework is [truffle](http://truffleframework.com/docs/getting_started/installation) and the goal is to test 
 as many every corner case as possible in the smart contract.
 The contract is based on ERC20, and uses code from the ERC20 Token
 Standard [page](https://theethereum.wiki/w/index.php/ERC20_Token_Standard).
@@ -65,5 +65,13 @@ is already set and reflects the current tokens when the bonus way payed. A simil
 mechanism is implemented for voting, however, the update of the voting power is done
 only during the voting phase.
 
-Minting is done once, and once the minting flag 
-and bonus is calculated off-contract...
+Minting is done once, and once the minting flag is set, it can never be unset. The rebates
+for the tiers is calculated off-contract in the 
+[minting backend](https://github.com/modum-io/tokenapp-backend/tree/master/services/minting).
+
+#Contract Testing
+[Truffle](http://truffleframework.com/docs/getting_started/installation) installation is
+done via npm: `sudo npm install -g truffle`. For the ethereum client, `testrpc` is recommended, 
+which can be installed via `sudo npm install -g ethereumjs-testrpc`. Next you have to clone
+the repository `git clone git@github.com:modum-io/tokenapp-smartcontract.git`, then go
+into that directory and start testing with `truffle test`.
