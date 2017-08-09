@@ -69,7 +69,7 @@ Minting is done once, and once the minting flag is set, it can never be unset. T
 for the tiers is calculated off-contract in the 
 [minting backend](https://github.com/modum-io/tokenapp-backend/tree/master/services/minting).
 
-#Contract Testing
+# Contract Testing
 [Truffle](http://truffleframework.com/docs/getting_started/installation) installation is
 done via npm: `sudo npm install -g truffle`. For the ethereum client, `testrpc` is recommended, 
 which can be installed via `sudo npm install -g ethereumjs-testrpc`. Next you have to clone
