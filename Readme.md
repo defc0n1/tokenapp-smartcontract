@@ -71,7 +71,20 @@ for the tiers is calculated off-contract in the
 
 # Contract Testing
 [Truffle](http://truffleframework.com/docs/getting_started/installation) installation is
-done via npm: `sudo npm install -g truffle`. For the ethereum client, `testrpc` is recommended, 
-which can be installed via `sudo npm install -g ethereumjs-testrpc`. Next you have to clone
-the repository `git clone git@github.com:modum-io/tokenapp-smartcontract.git`, then go
-into that directory and start testing with `truffle test`.
+done via npm: 
+```
+sudo npm install -g truffle
+```
+For the ethereum client, [testrpc](https://github.com/ethereumjs/testrpc) is recommended, 
+which can be installed via 
+```
+sudo npm install -g ethereumjs-testrpc
+```
+Next you have to clone the repository 
+```
+git clone git@github.com:modum-io/tokenapp-smartcontract.git
+```
+then go into that directory and start testing with 
+```
+truffle test
+```
