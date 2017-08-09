@@ -7,20 +7,6 @@ import "../contracts/ModumToken.sol";
 
 
 contract TestModumToken {
-
-/*
-
-testrpc
-geth attach http://localhost:8545
-
-var filter = web3.eth.filter({fromBlock: 0, toBlock: "latest"});
-filter.watch(function (error, result) {
-  console.log("RESULT: " + result.data);
-});
-
-filter.stopWatching();
-event logA(string s, address a);
-*/
     ModumToken meta;
     function beforeEach() {
         meta = new ModumToken();

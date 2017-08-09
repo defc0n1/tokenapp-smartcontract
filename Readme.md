@@ -86,5 +86,22 @@ git clone git@github.com:modum-io/tokenapp-smartcontract.git
 ```
 then go into that directory and start testing with 
 ```
+testrpc
 truffle test
 ```
+
+## Logging
+Please note that logging in Solidity works a bit different. In order to log, events have
+to be created. These events are displayed in case of errors in truffle. If you still want
+to see the events, one can attach the geth client with `geth attach http://localhost:8545`.
+Once the console is running, add a filter:
+```
+var filter = web3.eth.filter({fromBlock: 0, toBlock: "latest"});
+filter.watch(function (error, result) {
+  console.log("RESULT: " + result.data);
+});
+//in case you want to stop watching, execute:
+filter.stopWatching();
+```
+With this you can show any raw event e.g., (`event logA(string s, address a);`) that is fired
+in Solidity.
