@@ -28,8 +28,8 @@ event logA(string s, address a);
 
     function testInitialValues() {
         Assert.equal(meta.balanceOf(msg.sender), 0, "Owner should have 0 ModumToken initially");
-        Assert.equal(meta.totalSupply(), 9900000, "9'900'000 are the locked tokens");
-        Assert.equal(meta.getUnlockedTokens(), 0, "no unlocked tokens from the beginning");
+        Assert.equal(meta.getLockedTokens(), 9900000, "9'900'000 are the locked tokens");
+        Assert.equal(meta.totalSupply(), 0, "no unlocked tokens from the beginning");
         Assert.equal(meta.isMintDone(), false, "minting is active for newly created contracts");
     }
 }

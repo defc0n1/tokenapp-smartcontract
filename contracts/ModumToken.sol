@@ -53,7 +53,8 @@ contract ModumToken is ERC20Interface {
     uint maxTokens = 30 * 1000 * 1000;      //max distributable tokens
 
     bool mintDone = false;           //distinguisher for minting phase
-    uint votingDuration = 2 weeks;
+    //TODO: DEBUG, set to 2 weeks
+    uint votingDuration = 2 seconds;
     
     string public constant name = "Modum Token";
     string public constant symbol = "MOD";
@@ -76,7 +77,7 @@ contract ModumToken is ERC20Interface {
 	event Minted(address _addr, uint tokens);
 	event Voted(address _addr, bool option, uint votes);
 	event Payout(uint weiPerToken);
-    
+
     function proposal(string _addr, bytes32 _hash, uint _value) {
         require(msg.sender == owner); // proposal ony by onwer
         require(!isProposalActive()); // no proposal is active
@@ -96,14 +97,23 @@ contract ModumToken is ERC20Interface {
         require(votes > 0);  //voter must have a vote left
         
         if(_vote) {
-            currentProposal.yay = safeAdd(currentProposal.yay,votes);
+            currentProposal.yay = safeAdd(currentProposal.yay, votes);
         } else {
-            currentProposal.nay = safeAdd(currentProposal.nay,votes);
+            currentProposal.nay = safeAdd(currentProposal.nay, votes);
         }
         
         account.valueModVote = 0;
 		Voted(msg.sender,_vote,votes);
         return votes;
+    }
+
+    function showVotes(address _addr) constant returns (uint) {
+        Account memory account = accounts[_addr];
+        if(account.lastProposalStartTime < currentProposal.startTime || // the user did set his token power yet
+            (account.lastProposalStartTime == 0 && currentProposal.startTime == 0)) {
+                return account.valueMod;
+        }
+        return account.valueModVote;
     }
     
     function claimProposal() {
@@ -182,12 +192,12 @@ contract ModumToken is ERC20Interface {
         return 0;
     }
 
-    function getUnlockedTokens() constant returns (uint) {
-        return unlockedTokens;
+    function getLockedTokens() constant returns (uint) {
+        return lockedTokens;
     }
     
     function totalSupply() constant returns (uint) {
-        return safeAdd(unlockedTokens,lockedTokens);
+        return unlockedTokens;
     }
     
     function balanceOf(address _owner) constant returns (uint balance) {
