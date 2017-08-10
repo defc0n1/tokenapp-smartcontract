@@ -1,4 +1,4 @@
-pragma solidity ^0.4.10;
+pragma solidity ^0.4.13;
 
 //https://theethereum.wiki/w/index.php/ERC20_Token_Standard
 contract ERC20Interface {
@@ -53,8 +53,7 @@ contract ModumToken is ERC20Interface {
     uint maxTokens = 30 * 1000 * 1000;      //max distributable tokens
 
     bool mintDone = false;           //distinguisher for minting phase
-    //TODO: DEBUG, set to 2 weeks
-    uint votingDuration = 2 seconds;
+    uint votingDuration = 2 weeks;
     
     string public constant name = "Modum Token";
     string public constant symbol = "MOD";
@@ -138,7 +137,11 @@ contract ModumToken is ERC20Interface {
         require(_recipient.length == _value.length); //input need to be of same size
 
         for(uint16 i=0;i<_recipient.length;i++) {
-            require(safeAdd(totalSupply(),_value[i]) <= maxTokens); //do not exceed max
+            //here we check that we never exceed the 30mio max tokens. This includes
+            //the locked and the unlocked tokens. For that no safeMath is used,
+            //as these values are set by us and the max lockedtokens are 9.9mio, while
+            //the max unlockedtokens are 20.1mio
+            require(safeAdd(lockedTokens + unlockedTokens, _value[i]) <= maxTokens); //do not exceed max
 
             Account storage account = getAccount(_recipient[i], UpdateMode.Both);
             account.valueMod = safeAdd(account.valueMod, _value[i]); //create the tokens and add to recipient
