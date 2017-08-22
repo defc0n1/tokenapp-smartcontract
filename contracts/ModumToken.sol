@@ -81,7 +81,9 @@ contract ModumToken is ERC20Interface {
         require(msg.sender == owner); // proposal ony by onwer
         require(!isProposalActive()); // no proposal is active
         require(_value <= lockedTokens); //proposal cannot be larger than remaining locked tokens
-        require(_value > 0);            //proposal with 0 unlock are invalid
+        //a value of 0 can be used for regular votes
+        require(_hash > 0); //hash need to be set
+        require(bytes(_addr).length > 0); //the address need to be set and non-empty
         require(mintDone); //minting phase needs to be over
 
         uint _yay = 0;
@@ -120,7 +122,7 @@ contract ModumToken is ERC20Interface {
         require(isProposalActive()); // proposal active
         require(isVotingPhaseOver()); // voting has already ended
 
-        if(currentProposal.yay > currentProposal.nay) {
+        if(currentProposal.yay > currentProposal.nay && currentProposal.valueMod > 0) {
             //It was accepted
             Account storage account = getAccount(owner, UpdateMode.Both);
             uint valueMod = currentProposal.valueMod;
@@ -216,7 +218,7 @@ contract ModumToken is ERC20Interface {
     }
 
     function isProposalActive() constant returns (bool)  {
-        return currentProposal.valueMod > 0;
+        return currentProposal.hash > 0;
     }
 
     function isVotingPhaseOver() constant returns (bool)  {
@@ -247,32 +249,31 @@ contract ModumToken is ERC20Interface {
     
     function transfer(address _to, uint _value) returns (bool success) {
         require(mintDone);
-
+        require(_value > 0);
         Account storage tmpFrom = getAccount(msg.sender, UpdateMode.None);
-        if (tmpFrom.valueMod >= _value  && _value > 0){
-                Account storage from = getAccount(msg.sender, UpdateMode.Both);
-                Account storage to = getAccount(_to, UpdateMode.Both);
-                from.valueMod = safeSub(from.valueMod,_value);
-                to.valueMod = safeAdd(to.valueMod,_value);
-                Transfer(msg.sender, _to, _value);
-                return true;
-        } 
-        return false;
+        require(tmpFrom.valueMod >= _value);
+
+        Account storage from = getAccount(msg.sender, UpdateMode.Both);
+        Account storage to = getAccount(_to, UpdateMode.Both);
+        from.valueMod = safeSub(from.valueMod,_value);
+        to.valueMod = safeAdd(to.valueMod,_value);
+        Transfer(msg.sender, _to, _value);
+        return true;
     }
     
     function transferFrom(address _from, address _to, uint _value) returns (bool success) {
         require(mintDone);
+        require(_value > 0);
+        Account storage tmpFrom = getAccount(_from, UpdateMode.None);
+        require(tmpFrom.valueMod >= _value);
+        require(allowed[_from][msg.sender] >= _value);
 
-        Account storage tmpFrom = getAccount(msg.sender, UpdateMode.None);
-        if (tmpFrom.valueMod >= _value  && _value > 0 && allowed[_from][msg.sender] >= _value){
-                Account storage from = getAccount(msg.sender, UpdateMode.Both);
-                Account storage to = getAccount(_to, UpdateMode.Both);
-                from.valueMod = safeSub(from.valueMod,_value);
-                to.valueMod = safeAdd(to.valueMod ,_value);
-                allowed[_from][msg.sender] = safeSub(allowed[_from][msg.sender],_value);
-                Transfer(msg.sender, _to, _value);
-                return true;
-        } 
+        Account storage from = getAccount(_from, UpdateMode.Both);
+        Account storage to = getAccount(_to, UpdateMode.Both);
+        from.valueMod = safeSub(from.valueMod,_value);
+        to.valueMod = safeAdd(to.valueMod ,_value);
+        allowed[_from][msg.sender] = safeSub(allowed[_from][msg.sender],_value);
+        Transfer(msg.sender, _to, _value);
         return false;
     }
     
