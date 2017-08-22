@@ -274,7 +274,7 @@ contract ModumToken is ERC20Interface {
         to.valueMod = safeAdd(to.valueMod ,_value);
         allowed[_from][msg.sender] = safeSub(allowed[_from][msg.sender],_value);
         Transfer(msg.sender, _to, _value);
-        return false;
+        return true;
     }
     
     function approve(address _spender, uint _value) returns (bool success) {
