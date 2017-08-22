@@ -34,7 +34,6 @@ contract('ModumToken', function (accounts) {
     });
 
     it("test bonus payment with payments in between", function() {
-        var before;
         return ModumToken.deployed().then(function (instance) {
         }).then(function (retVal) {
             return utils.testMint(contract, accounts, 500000, 200000, 100000)
@@ -61,5 +60,23 @@ contract('ModumToken', function (accounts) {
         });
     });
 
+    it("test gas bonus calculation", function() {
+        var beforeAccount1;
+        return ModumToken.deployed().then(function (instance) {
+        }).then(function (retVal) {
+            return utils.testMint(contract, accounts, 500000, 200000, 100000)
+        }).then(function (retVal) {
+            return contract.send(800000);
+        }).then(function (retVal) {
+            beforeAccount1 = web3.toBigNumber(web3.eth.getBalance(accounts[1]));
+            return contract.claimBonus({from: accounts[1]});
+        }).then(function (retVal) {
+            const txFee = web3.toBigNumber(web3.eth.getTransactionReceipt(retVal.tx).gasUsed).times(
+                web3.toBigNumber(web3.eth.getTransaction(retVal.tx).gasPrice));
+            const afterAccount1Expected = (beforeAccount1.minus(txFee)).plus(web3.toBigNumber(200000));
+            const afterAccount1 = web3.toBigNumber(web3.eth.getBalance(accounts[1]));
+            assert.equal(afterAccount1.toString(), afterAccount1Expected.toString(), "gas calculation wrong");
+        });
+    });
 
 });

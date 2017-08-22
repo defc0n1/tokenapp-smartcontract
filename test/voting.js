@@ -14,11 +14,6 @@ contract('ModumToken', function (accounts) {
             });
     });
 
-    const twoWeeks = 2 * 7 * 24 * 60 * 60;
-    function waitTwoWeeks() {
-        web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [twoWeeks], id: 0})
-    }
-
     it("test voting with phases and voting successful with token transfer in between", function () {
         return ModumToken.deployed().then(function (instance) {
             contract.mint([accounts[0]], [1000], {from: accounts[0]});
@@ -62,7 +57,7 @@ contract('ModumToken', function (accounts) {
         }).catch(function (e) {
             return utils.testVotingPhaseStatus(contract, accounts, true, true, false);
         }).then(function (retVal) {
-            waitTwoWeeks();
+            utils.waitTwoWeeks();
             return contract.claimProposal({from: accounts[1]})
         }).then(function (retVal) {
             assert.equal(false, 0, "voting period not over yet");
@@ -74,7 +69,7 @@ contract('ModumToken', function (accounts) {
             return utils.testTokens(contract, accounts, 9900000 - 5000, 6000, 5950, 50);
         }).then(function (retVal) {
             return utils.testVotingPhaseStatus(contract, accounts, false, false, true);
-        });
+        }).catch((err) => { throw new Error(err) });
     });
 
     it("test multiple voting, no increase", function () {
@@ -94,7 +89,7 @@ contract('ModumToken', function (accounts) {
         }).catch(function (e) {
             //this is expected
             return utils.testTokens(contract, accounts, 0, 5000 + 9900000 + 1000 + 1001, 5000 + 9900000, 1001);
-        });
+        }).catch((err) => { throw new Error(err) });
     });
 
     it("test multiple voting, increase tokens for account 2", function () {
@@ -114,8 +109,21 @@ contract('ModumToken', function (accounts) {
         }).catch(function (e) {
             //this is expected
             return utils.testTokens(contract, accounts, 0, 4700 + 9900000 + 1300 + 1001, 4700 + 9900000, 1001);
-        });
+        }).catch((err) => { throw new Error(err) });
     });
 
+    it("test empty voting fails", function () {
+        return ModumToken.deployed().then(function (instance) {
+        }).then(function (retVal) {
+            return utils.testMint(contract, accounts, 5000, 1001, 1000)
+        }).then(function (retVal) {
+            return contract.proposal("https://", "0x123", 0, {from: accounts[0]});
+        }).then(function (retVal) {
+            assert.equal(false, 0, "cannot vote for 0 tokens");
+        }).catch(function (e) {
+            //this is expected
+            return utils.testTokens(contract, accounts, 9900000, 7001, 5000, 1001);
+        }).catch((err) => { throw new Error(err) });
+    });
 
 });

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.13;
+pragma solidity ^0.4.14;
 
 //https://theethereum.wiki/w/index.php/ERC20_Token_Standard
 contract ERC20Interface {
@@ -81,7 +81,7 @@ contract ModumToken is ERC20Interface {
         require(msg.sender == owner); // proposal ony by onwer
         require(!isProposalActive()); // no proposal is active
         require(_value <= lockedTokens); //proposal cannot be larger than remaining locked tokens
-        //a value of 0 can be used for regular votes
+        require(_value > 0); //there needs to be locked tokens to make proposal, at least 1 locked token
         require(_hash > 0); //hash need to be set
         require(bytes(_addr).length > 0); //the address need to be set and non-empty
         require(mintDone); //minting phase needs to be over
@@ -200,7 +200,8 @@ contract ModumToken is ERC20Interface {
     function getLockedTokens() constant returns (uint) {
         return lockedTokens;
     }
-    
+
+    //locked tokens do not count for the total supply: locked tokens cannot vote, tranfer, or claim bonus
     function totalSupply() constant returns (uint) {
         return unlockedTokens;
     }
