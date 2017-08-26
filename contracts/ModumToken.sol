@@ -1,5 +1,8 @@
 pragma solidity ^0.4.14;
 
+import './SafeMath.sol';
+
+
 //https://theethereum.wiki/w/index.php/ERC20_Token_Standard
 contract ERC20Interface {
 
@@ -30,6 +33,8 @@ contract ERC20Interface {
 }
 
 contract ModumToken is ERC20Interface {
+
+    using SafeMath for uint256;
     
     address owner;
     mapping(address => Account) accounts;
@@ -98,9 +103,9 @@ contract ModumToken is ERC20Interface {
         require(votes > 0);  //voter must have a vote left
         
         if(_vote) {
-            currentProposal.yay = safeAdd(currentProposal.yay, votes);
+            currentProposal.yay = currentProposal.yay.add(votes);
         } else {
-            currentProposal.nay = safeAdd(currentProposal.nay, votes);
+            currentProposal.nay = currentProposal.nay.add(votes);
         }
         
         account.valueModVote = 0;
@@ -126,9 +131,9 @@ contract ModumToken is ERC20Interface {
             //It was accepted
             Account storage account = getAccount(owner, UpdateMode.Both);
             uint valueMod = currentProposal.valueMod;
-            account.valueMod = safeAdd(account.valueMod, valueMod); //uadd to owner
-            unlockedTokens = safeAdd(unlockedTokens,valueMod); //unlock
-            lockedTokens = safeSub(lockedTokens,valueMod); //unlock
+            account.valueMod = account.valueMod.add(valueMod); //uadd to owner
+            unlockedTokens = unlockedTokens.add(valueMod); //unlock
+            lockedTokens = lockedTokens.sub(valueMod); //unlock
         }
         delete currentProposal; //proposal ended
     }
@@ -143,11 +148,11 @@ contract ModumToken is ERC20Interface {
             //the locked and the unlocked tokens. For that no safeMath is used,
             //as these values are set by us and the max lockedtokens are 9.9mio, while
             //the max unlockedtokens are 20.1mio
-            require(safeAdd(lockedTokens + unlockedTokens, _value[i]) <= maxTokens); //do not exceed max
+            require(lockedTokens.add(unlockedTokens).add(_value[i]) <= maxTokens); //do not exceed max
 
             Account storage account = getAccount(_recipient[i], UpdateMode.Both);
-            account.valueMod = safeAdd(account.valueMod, _value[i]); //create the tokens and add to recipient
-            unlockedTokens = safeAdd(unlockedTokens, _value[i]); //create tokens
+            account.valueMod = account.valueMod.add(_value[i]); //create the tokens and add to recipient
+            unlockedTokens = unlockedTokens.add(_value[i]); //create tokens
 		    Minted(_recipient[i], _value[i]);
         }
     }
@@ -169,17 +174,17 @@ contract ModumToken is ERC20Interface {
     function() payable {
         require(mintDone); //minting needs to be over
 
-        uint value = safeAdd(msg.value, rounding); //add old runding
+        uint value = msg.value.add(rounding); //add old runding
         rounding = value % unlockedTokens; //ensure no rounding error
-		uint weiPerToken = safeDiv(safeSub(value, rounding), unlockedTokens);
-        totalDropPerUnlockedToken = safeAdd(totalDropPerUnlockedToken, weiPerToken); //account for locked tokens and add the drop
+		uint weiPerToken = value.sub(rounding).div(unlockedTokens);
+        totalDropPerUnlockedToken = totalDropPerUnlockedToken.add(weiPerToken); //account for locked tokens and add the drop
 		Payout(weiPerToken);
 	}
 
     function showBonus() constant returns (uint) {
-        uint bonus = safeSub(totalDropPerUnlockedToken, accounts[msg.sender].lastAirdropWei);
+        uint bonus = totalDropPerUnlockedToken.sub(accounts[msg.sender].lastAirdropWei);
         if(bonus != 0) {
-            return safeAdd(accounts[msg.sender].bonusWei, safeMul(bonus, accounts[msg.sender].valueMod));
+            return accounts[msg.sender].bonusWei.add(bonus.mul(accounts[msg.sender].valueMod));
         }
         return accounts[msg.sender].bonusWei;
     }
@@ -213,8 +218,8 @@ contract ModumToken is ERC20Interface {
     function isVoteOngoing() constant returns (bool)  {
         return isProposalActive()
             && now >= currentProposal.startTime
-            && now < currentProposal.startTime + votingDuration;
-            //no safeAdd as time is not set by the user, thus its safe to use it for longer periods:
+            && now < currentProposal.startTime.add(votingDuration);
+            //its safe to use it for longer periods:
             //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
     }
 
@@ -223,9 +228,9 @@ contract ModumToken is ERC20Interface {
     }
 
     function isVotingPhaseOver() constant returns (bool)  {
-        //no safeAdd as time is not set by the user, thus its safe to use it for longer periods:
+        //its safe to use it for longer periods:
         //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
-        return now >= currentProposal.startTime + votingDuration;
+        return now >= currentProposal.startTime.add(votingDuration);
     }
     
 	function getAccount(address _addr, UpdateMode mode) internal returns(Account storage){        
@@ -238,9 +243,9 @@ contract ModumToken is ERC20Interface {
 		}
 		
 		if(mode == UpdateMode.Wei || mode == UpdateMode.Both){
-            uint bonus = safeSub(totalDropPerUnlockedToken, account.lastAirdropWei);
+            uint bonus = totalDropPerUnlockedToken.sub(account.lastAirdropWei);
             if(bonus != 0){
-    			account.bonusWei = safeAdd(account.bonusWei, safeMul(bonus, account.valueMod));
+    			account.bonusWei = account.bonusWei.add(bonus.mul(account.valueMod));
     			account.lastAirdropWei = totalDropPerUnlockedToken;
     		}
 		}
@@ -256,8 +261,8 @@ contract ModumToken is ERC20Interface {
 
         Account storage from = getAccount(msg.sender, UpdateMode.Both);
         Account storage to = getAccount(_to, UpdateMode.Both);
-        from.valueMod = safeSub(from.valueMod,_value);
-        to.valueMod = safeAdd(to.valueMod,_value);
+        from.valueMod = from.valueMod.sub(_value);
+        to.valueMod = to.valueMod.add(_value);
         Transfer(msg.sender, _to, _value);
         return true;
     }
@@ -271,49 +276,44 @@ contract ModumToken is ERC20Interface {
 
         Account storage from = getAccount(_from, UpdateMode.Both);
         Account storage to = getAccount(_to, UpdateMode.Both);
-        from.valueMod = safeSub(from.valueMod,_value);
-        to.valueMod = safeAdd(to.valueMod ,_value);
-        allowed[_from][msg.sender] = safeSub(allowed[_from][msg.sender],_value);
+        from.valueMod = from.valueMod.sub(_value);
+        to.valueMod = to.valueMod.add(_value);
+        allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
         Transfer(msg.sender, _to, _value);
         return true;
     }
-    
-    function approve(address _spender, uint _value) returns (bool success) {
+
+    function approve(address _spender, uint256 _value) returns (bool) {
+
+        // To change the approve amount you first have to reduce the addresses`
+        //  allowance to zero by calling `approve(_spender, 0)` if it is not
+        //  already 0 to mitigate the race condition described here:
+        //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+        require((_value == 0) || (allowed[msg.sender][_spender] == 0));
+
         allowed[msg.sender][_spender] = _value;
         Approval(msg.sender, _spender, _value);
         return true;
     }
-    
-    function allowance(address _owner, address _spender) constant returns (uint remaining) {
+
+    function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
         return allowed[_owner][_spender];
     }
 
-    //************************* SafeMath ************************************
-    //From SafeMath found in https://github.com/OpenZeppelin/zeppelin-solidity/blob/master/contracts/math/SafeMath.sol
-    //removed it as a library function for better readability
-    function safeMul(uint256 a, uint256 b) internal constant returns (uint256) {
-        uint256 c = a * b;
-        assert(a == 0 || c / a == b);
-        return c;
+    function increaseApproval (address _spender, uint _addedValue) returns (bool success) {
+        allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
+        Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+        return true;
     }
 
-    function safeDiv(uint256 a, uint256 b) internal constant returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    function safeSub(uint256 a, uint256 b) internal constant returns (uint256) {
-        assert(b <= a);
-        return a - b;
-    }
-
-    function safeAdd(uint256 a, uint256 b) internal constant returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
+    function decreaseApproval (address _spender, uint _subtractedValue) returns (bool success) {
+        uint oldValue = allowed[msg.sender][_spender];
+        if (_subtractedValue > oldValue) {
+            allowed[msg.sender][_spender] = 0;
+        } else {
+            allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);
+        }
+        Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+        return true;
     }
 }
-
-
