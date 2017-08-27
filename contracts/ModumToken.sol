@@ -152,8 +152,8 @@ contract ModumToken is ERC20Interface {
 
     function isVoteOngoing() constant returns (bool)  {
         return isProposalActive()
-        && now >= currentProposal.startTime
-        && now < currentProposal.startTime.add(votingDuration);
+            && now >= currentProposal.startTime
+            && now < currentProposal.startTime.add(votingDuration);
         //its safe to use it for longer periods:
         //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
     }
@@ -171,7 +171,7 @@ contract ModumToken is ERC20Interface {
         require(_recipient.length == _value.length); //input need to be of same size
 
         //we want to mint a couple of accounts
-        for (uint16 i = 0; i < _recipient.length; i++) {
+        for (uint16 i=0; i<_recipient.length; i++) {
             //here we check that we never exceed the 30mio max tokens. This includes
             //the locked and the unlocked tokens.
             require(lockedTokens.add(unlockedTokens).add(_value[i]) <= maxTokens);
