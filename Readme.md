@@ -105,3 +105,22 @@ filter.stopWatching();
 ```
 With this you can show any raw event e.g., (`event logA(string s, address a);`) that is fired
 in Solidity.
+
+## Monolithic vs. Modular
+This contract relies on heavily used and community reviewed libraries such as
+OpenZeppelin. We also used ERC20 functionality from [theethereum.wiki](https://theethereum.wiki/w/index.php/ERC20_Token_Standard).
+
+Since the code is reasonably small, it is copied (after a thorough review)
+directly into this contract. Suggestions to use a package manager such as npm
+for these couple lines of code is overkill as well as splitting this contract
+into multiple packages. Besides readability and maintainability suffers if small
+files are split up instead of having it in a [single place](https://medium.com/@rdsubhas/10-modern-software-engineering-mistakes-bc67fbef4fc8).
+
+The ERC20 Interface is from the [Ethereum Github page](https://github.com/ethereum/eips/issues/20). Although
+OpenZeppelin suggests an improved interface, this contract uses the original ERC20 standard.
+
+## Mixing Require() and Modifiers
+At the beginning of many functions in the contract, require() functions are called
+to check if certain conditions are met. Solidity allows to use modifiers such as onlyOwner() instead of
+certain require(). In this contract these modifiers are not used with the goal to have everything
+in one place. Thus, at the beginning of a function all requirements are set with require().

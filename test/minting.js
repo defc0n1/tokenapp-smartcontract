@@ -58,10 +58,10 @@ contract('ModumToken', function (accounts) {
         }).then(function (retVal) {
             assert.equal(false, "minting finished can only be called from the owner");
         }).catch(function (e) {
-            return contract.isMintDone.call({from: accounts[0]});
+            return contract.mintDone.call({from: accounts[0]});
         }).then(function (retVal) {
             assert.equal(retVal.valueOf(), false, "minting is not done yet, we can call this from any account");
-            return contract.isMintDone.call({from: accounts[1]});
+            return contract.mintDone.call({from: accounts[1]});
         }).then(function (retVal) {
             assert.equal(retVal.valueOf(), false, "minting is still not done yet, we can call this from any account");
             return contract.setMintDone({from: accounts[0]});
@@ -70,10 +70,10 @@ contract('ModumToken', function (accounts) {
         }).then(function (retVal) {
             assert.equal(false, "cannot call minting done this twice");
         }).catch(function (e) {
-            return contract.isMintDone.call({from: accounts[0]});
+            return contract.mintDone.call({from: accounts[0]});
         }).then(function (retVal) {
             assert.equal(retVal.valueOf(), true, "minting is done, we can call this from any account");
-            return contract.isMintDone.call({from: accounts[1]});
+            return contract.mintDone.call({from: accounts[1]});
         }).then(function (retVal) {
             assert.equal(retVal.valueOf(), true, "minting is done, we can call this from any account");
         });

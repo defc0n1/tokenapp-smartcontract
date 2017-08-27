@@ -28,7 +28,7 @@ contract('ModumToken', function (accounts) {
             assert.equal(retVal.valueOf(), 0, "account 1 have 0 votes");
             return utils.testVotingPhaseStatus(contract, accounts, false, false, true);
         }).then(function (retVal) {
-            return contract.proposal("https://", "0x123", 5000, {from: accounts[0]});
+            return contract.votingProposal("https://", "0x123", 5000, {from: accounts[0]});
         }).then(function () {
             return contract.transfer(accounts[1], 50, {from: accounts[0]});
         }).then(function (e) {
@@ -51,20 +51,20 @@ contract('ModumToken', function (accounts) {
             return contract.showVotes.call(accounts[0], {from: accounts[0]})
         }).then(function (retVal) {
             assert.equal(retVal.valueOf(), 0, "account 0 already voted, so he has 0 votes");
-            return contract.claimProposal({from: accounts[0]})
+            return contract.claimVotingProposal({from: accounts[0]})
         }).then(function (retVal) {
             assert.equal(false, 0, "voting period not over yet");
         }).catch(function (e) {
             return utils.testVotingPhaseStatus(contract, accounts, true, true, false);
         }).then(function (retVal) {
             utils.waitTwoWeeks();
-            return contract.claimProposal({from: accounts[1]})
+            return contract.claimVotingProposal({from: accounts[1]})
         }).then(function (retVal) {
             assert.equal(false, 0, "voting period not over yet");
         }).catch(function (e) {
             return utils.testVotingPhaseStatus(contract, accounts, false, true, true);
         }).then(function (retVal) {
-            return contract.claimProposal({from: accounts[0]})
+            return contract.claimVotingProposal({from: accounts[0]})
         }).then(function (retVal) {
             return utils.testTokens(contract, accounts, 9900000 - 5000, 6000, 5950, 50);
         }).then(function (retVal) {
@@ -83,7 +83,7 @@ contract('ModumToken', function (accounts) {
         }).then(function (retVal) {
             return utils.testVote(contract, accounts, 9900000 - 5000, 1001, 1000, 0, true, false, 5000 + 9900000);
         }).then(function (retVal) {
-            return contract.proposal("https://", "0x123", 1, {from: accounts[0]});
+            return contract.votingProposal("https://", "0x123", 1, {from: accounts[0]});
         }).then(function (retVal) {
             assert.equal(false, 0, "all locked tokens used");
         }).catch(function (e) {
@@ -103,7 +103,7 @@ contract('ModumToken', function (accounts) {
         }).then(function (retVal) {
             return utils.testVote(contract, accounts, 9900000 - 5000, 1001, 1300, 0, false, true, 4700 + 9900000);
         }).then(function (retVal) {
-            return contract.proposal("https://", "0x123", 1, {from: accounts[0]});
+            return contract.votingProposal("https://", "0x123", 1, {from: accounts[0]});
         }).then(function (retVal) {
             assert.equal(false, 0, "all locked tokens used");
         }).catch(function (e) {
