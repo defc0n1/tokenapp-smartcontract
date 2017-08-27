@@ -171,7 +171,7 @@ contract ModumToken is ERC20Interface {
         require(_recipient.length == _value.length); //input need to be of same size
 
         //we want to mint a couple of accounts
-        for (uint16 i=0; i<_recipient.length; i++) {
+        for (uint8 i=0; i<_recipient.length; i++) {
             //here we check that we never exceed the 30mio max tokens. This includes
             //the locked and the unlocked tokens.
             require(lockedTokens.add(unlockedTokens).add(_value[i]) <= maxTokens);
