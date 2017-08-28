@@ -64,6 +64,8 @@ contract ModumToken is ERC20Interface {
     }
     Proposal public currentProposal;
     uint256 public constant votingDuration = 2 weeks;
+    uint256 public lastNegativeVoting = 0;
+    uint256 public constant blockingDuration = 90 days;
 
     event Voted(address _addr, bool option, uint256 votes); //called when a vote is casted
     event Payout(uint256 weiPerToken); //called when an someone payed ETHs to this contract, that can be distributed
@@ -98,6 +100,10 @@ contract ModumToken is ERC20Interface {
         require(_hash != bytes32(0)); //hash need to be set
         require(bytes(_addr).length > 0); //the address need to be set and non-empty
         require(mintDone); //minting phase needs to be over
+        //in case of negative vote, wait 90 days. If no lastNegativeVoting have
+        //occured, lastNegativeVoting is 0 and now is always larger than 14.1.1970
+        //(1.1.1970 plus blockingDuration).
+        require(now > lastNegativeVoting.add(blockingDuration));
 
         currentProposal = Proposal(_addr, _hash, _value, now, 0, 0);
     }
@@ -142,6 +148,11 @@ contract ModumToken is ERC20Interface {
             account.valueMod = account.valueMod.add(valueMod); //add tokens to owner
             unlockedTokens = unlockedTokens.add(valueMod);
             lockedTokens = lockedTokens.sub(valueMod);
+        } else if(currentProposal.yay <= currentProposal.nay) {
+            //in case of a negative vote, set the time of this negative
+            //vote to the end of the negative voting period.
+            //This will prevent any new voting to be conducted.
+            lastNegativeVoting = currentProposal.startTime.add(votingDuration);
         }
         delete currentProposal; //proposal ended
     }
