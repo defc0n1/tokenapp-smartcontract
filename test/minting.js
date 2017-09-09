@@ -36,9 +36,11 @@ contract('ModumToken', function (accounts) {
         }).then(function (balance) {
             return contract.mint([accounts[2]], [1], {from: accounts[0]});
         }).then(function (retVal) {
+            return contract.setMintDone({from: accounts[0]});
+        }).then(function (retVal) {
             assert.equal(false, "we have already sold all our tokens ");
         }).catch(function (e) {
-            return utils.testTokens(contract, accounts, 9900000, 20100000, 1000, 20100000 - 1000);
+            return utils.testTokens(contract, accounts, 9900000, 20100001, 1000, 20100000 - 1000, 1); //we exceeded max, but we cannot finish mint
         });
     });
 
@@ -46,9 +48,11 @@ contract('ModumToken', function (accounts) {
         return ModumToken.deployed().then(function (instance) {
             return  contract.mint([accounts[0],accounts[1], accounts[2]], [1000, 20100000 - 1000, 1], {from: accounts[0]});
         }).then(function (retVal) {
+            return contract.setMintDone({from: accounts[0]});
+        }).then(function (retVal) {
             assert.equal(false, "we have already sold all our tokens ");
         }).catch(function (e) {
-            return utils.testTokens(contract, accounts, 9900000, 0, 0, 0);
+            return utils.testTokens(contract, accounts, 9900000, 20100001, 1000, 20100000 - 1000, 1);//we exceeded max, but we cannot finish mint
         })
     });
 
