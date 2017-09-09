@@ -29,6 +29,7 @@ contract ModumToken is ERC20Interface {
     struct Account {
         uint256 lastProposalStartTime; //For checking at which proposal valueModVote was last updated
         uint256 lastAirdropWei; //For checking after which airDrop bonusWei was last updated
+        uint256 lastAirdropClaimTime; //for unclaimed airdrops, re-airdrop
         uint256 bonusWei;      //airDrop/Dividend payout available for withdrawal.
         uint256 valueModVote;  // votes available for voting on active Proposal
         uint256 valueMod;      // the owned tokens
@@ -47,6 +48,7 @@ contract ModumToken is ERC20Interface {
     //minting phase running if false, true otherwise. Many operations can only be called when
     //minting phase is over
     bool public mintDone = false;
+    uint256 public constant redistributionTimeout = 548 days; //18 month
 
     //as suggested in https://theethereum.wiki/w/index.php/ERC20_Token_Standard
     string public constant name = "Modum Token";
@@ -179,16 +181,24 @@ contract ModumToken is ERC20Interface {
     function mint(address[] _recipient, uint256[] _value)  {
         require(msg.sender == owner); //only owner can claim proposal
         require(!mintDone); //only during minting
-        require(_recipient.length == _value.length); //input need to be of same size
+        //require(_recipient.length == _value.length); //input need to be of same size
+        //we know what we are doing... remove check to save gas
 
         //we want to mint a couple of accounts
         for (uint8 i=0; i<_recipient.length; i++) {
-            //here we check that we never exceed the 30mio max tokens. This includes
-            //the locked and the unlocked tokens.
-            require(lockedTokens.add(unlockedTokens).add(_value[i]) <= maxTokens);
+            
+            //require(lockedTokens.add(unlockedTokens).add(_value[i]) <= maxTokens);
+            //do the check in the mintDone
 
-            Account storage account = updateAccount(_recipient[i], UpdateMode.Both);
+            //no need to update account, as we have not set minting to true. This means
+            //nobody can start a proposal (isVoteOngoing() is always false) and airdrop
+            //cannot be done either totalDropPerUnlockedToken is 0 thus, bonus is always
+            //zero.
+            Account storage account = accounts[_recipient[i]]; 
             account.valueMod = account.valueMod.add(_value[i]);
+            //if this remains 0, we cannot calculate the time period when the user claimed
+            //his airdrop, thus, set it to now
+            account.lastAirdropClaimTime = now;
             unlockedTokens = unlockedTokens.add(_value[i]); //create the tokens and add to recipient
             Minted(_recipient[i], _value[i]);
         }
@@ -197,6 +207,9 @@ contract ModumToken is ERC20Interface {
     function setMintDone() {
         require(msg.sender == owner);
         require(!mintDone); //only in minting phase
+        //here we check that we never exceed the 30mio max tokens. This includes
+        //the locked and the unlocked tokens.
+        require(lockedTokens.add(unlockedTokens) <= maxTokens);
         mintDone = true; //end the minting
     }
 
@@ -228,8 +241,28 @@ contract ModumToken is ERC20Interface {
     //Dividend payment / Airdrop
     function() payable {
         require(mintDone); //minting needs to be over
-
-        uint256 value = msg.value.add(rounding); //add old rounding
+        payout(msg.value);
+    }
+    
+    //anybody can pay and add address that will be checked if they
+    //can be added to the bonus
+    function payBonus(address[] _addr) payable {
+        uint256 totalWei = 0;
+        for (uint8 i=0; i<_addr.length; i++) {
+            Account storage account = updateAccount(_addr[i], UpdateMode.Wei);
+            if(account.lastAirdropClaimTime + redistributionTimeout < now) {
+                totalWei += account.bonusWei;
+                account.bonusWei = 0;
+                account.lastAirdropClaimTime = now;
+            } else {
+                throw;
+            }
+        }
+        payout(msg.value.add(totalWei));
+    }
+    
+    function payout(uint256 valueWei) internal {
+        uint256 value = valueWei.add(rounding); //add old rounding
         rounding = value % unlockedTokens; //ensure no rounding error
         uint256 weiPerToken = value.sub(rounding).div(unlockedTokens);
         totalDropPerUnlockedToken = totalDropPerUnlockedToken.add(weiPerToken); //account for locked tokens and add the drop
@@ -251,7 +284,8 @@ contract ModumToken is ERC20Interface {
         uint256 sendValue = account.bonusWei; //fetch the values
 
         if(sendValue != 0) {
-            account.bonusWei = 0; //set to zero (before against reentry)
+            account.bonusWei = 0; //set to zero (before, against reentry)
+            account.lastAirdropClaimTime = now; //mark as collected now
             msg.sender.transfer(sendValue); //send the bonus to the correct account
             return sendValue;
         }
