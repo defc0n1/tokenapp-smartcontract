@@ -190,17 +190,21 @@ contract ModumToken is ERC20Interface {
             //require(lockedTokens.add(unlockedTokens).add(_value[i]) <= maxTokens);
             //do the check in the mintDone
 
+            //121 gas can be saved by creating temporary variables
+            address tmpRecipient = _recipient[i];
+            uint tmpValue = _value[i];
+
             //no need to update account, as we have not set minting to true. This means
             //nobody can start a proposal (isVoteOngoing() is always false) and airdrop
             //cannot be done either totalDropPerUnlockedToken is 0 thus, bonus is always
             //zero.
-            Account storage account = accounts[_recipient[i]]; 
-            account.valueMod = account.valueMod.add(_value[i]);
+            Account storage account = accounts[tmpRecipient];
+            account.valueMod = account.valueMod.add(tmpValue);
             //if this remains 0, we cannot calculate the time period when the user claimed
             //his airdrop, thus, set it to now
             account.lastAirdropClaimTime = now;
-            unlockedTokens = unlockedTokens.add(_value[i]); //create the tokens and add to recipient
-            Minted(_recipient[i], _value[i]);
+            unlockedTokens = unlockedTokens.add(tmpValue); //create the tokens and add to recipient
+            Minted(tmpRecipient, tmpValue);
         }
     }
 
