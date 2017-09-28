@@ -252,7 +252,7 @@ contract ModumToken is ERC20Interface {
         uint256 totalWei = 0;
         for (uint8 i=0; i<_addr.length; i++) {
             Account storage account = updateAccount(_addr[i], UpdateMode.Wei);
-            if(account.lastAirdropClaimTime + redistributionTimeout < now) {
+            if(now >= account.lastAirdropClaimTime + redistributionTimeout) {
                 totalWei += account.bonusWei;
                 account.bonusWei = 0;
                 account.lastAirdropClaimTime = now;

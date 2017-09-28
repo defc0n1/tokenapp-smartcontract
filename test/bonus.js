@@ -30,7 +30,7 @@ contract('ModumToken', function (accounts) {
         }).then(function (retVal) {
             assert.equal(retVal.logs.length, 1, "1 event was fired for bonus");
             assert.equal(retVal.logs[0].args.weiPerToken.valueOf(), 1, "expect 1 wei per token");
-        })
+        }).catch((err) => { throw new Error(err) });
     });
 
     it("test bonus payment with payments in between", function() {
@@ -76,7 +76,27 @@ contract('ModumToken', function (accounts) {
             const afterAccount1Expected = (beforeAccount1.minus(txFee)).plus(web3.toBigNumber(200000));
             const afterAccount1 = web3.toBigNumber(web3.eth.getBalance(accounts[1]));
             assert.equal(afterAccount1.toString(), afterAccount1Expected.toString(), "gas calculation wrong");
-        });
+        }).catch((err) => { throw new Error(err) });
     });
 
+    it("test redistribution", function() {
+        return ModumToken.deployed().then(function (instance) {
+        }).then(function (retVal) {
+            return utils.testMint(contract, accounts, 500000, 200000, 100000)
+        }).then(function (retVal) {
+            return contract.send(800001);
+        }).then(function (retVal) {
+            return utils.claimAndTestBonus(contract, accounts[0], 500000);
+        }).then(function (retVal) {
+            utils.wait548Days();
+        }).then(function (retVal) {
+            contract.payout(4000, {from: accounts[0]});
+        }).then(function (retVal) {
+            assert.equal(false, "cannot call internal function");
+        }).catch(function (e) {
+            return contract.payBonus([accounts[1], accounts[2]], {value: 499999, from: accounts[0]});
+        }).then(function (retVal) {
+            return utils.claimAndTestBonus(contract, accounts[0], 500000);
+        }).catch((err) => { throw new Error(err) });
+    });
 });
