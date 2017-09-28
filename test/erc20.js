@@ -333,9 +333,9 @@ contract('ModumToken', function (accounts) {
                     var transferLog = result.logs.find((element) => {
                             if (element.event.match('Transfer')) { return true } else { return false }
                 })
-                    assert.strictEqual(transferLog.args._from, accounts[0])
-                    assert.strictEqual(transferLog.args._to, accounts[1])
-                    assert.strictEqual(transferLog.args._value.toString(), '2666')
+                    assert.strictEqual(transferLog.args.from, accounts[0])
+                    assert.strictEqual(transferLog.args.to, accounts[1])
+                    assert.strictEqual(transferLog.args.value.toString(), '2666')
                 }).catch((err) => { throw new Error(err) })
     })
 
@@ -361,9 +361,9 @@ contract('ModumToken', function (accounts) {
                     var approvalLog = result.logs.find((element) => {
                             if (element.event.match('Approval')) { return true } else { return false }
                 })
-                    assert.strictEqual(approvalLog.args._owner, accounts[0])
-                    assert.strictEqual(approvalLog.args._spender, accounts[1])
-                    assert.strictEqual(approvalLog.args._value.toString(), '2666')
+                    assert.strictEqual(approvalLog.args.owner, accounts[0])
+                    assert.strictEqual(approvalLog.args.spender, accounts[1])
+                    assert.strictEqual(approvalLog.args.value.toString(), '2666')
                 }).catch((err) => { throw new Error(err) })
     })
 })

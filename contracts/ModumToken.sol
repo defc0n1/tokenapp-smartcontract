@@ -4,17 +4,16 @@ import './SafeMath.sol';
 
 //Interface declaration from: https://github.com/ethereum/eips/issues/20
 contract ERC20Interface {
-    // This triggers a warning: This declaration shadows an existing declaration.
-    // Since we are not using totalSupply anywhere else than as this function, it can be safely ignored.
-    function totalSupply() constant returns (uint256 totalSupply);
-    function balanceOf(address _owner) constant returns (uint256 balance);
-    function transfer(address _to, uint256 _value) returns (bool success);
-    function transferFrom(address _from, address _to, uint256 _value) returns (bool success);
-    function approve(address _spender, uint256 _value) returns (bool success);
-    function allowance(address _owner, address _spender) constant returns (uint256 remaining);
-
-    event Transfer(address indexed _from, address indexed _to, uint256 _value); // Triggered when tokens are transferred.
-    event Approval(address indexed _owner, address indexed _spender, uint256 _value); // Triggered whenever approve() is called.
+    //from: https://github.com/OpenZeppelin/zeppelin-solidity/blob/b395b06b65ce35cac155c13d01ab3fc9d42c5cfb/contracts/token/ERC20Basic.sol
+    uint256 public totalSupply; //tokens that can vote, transfer, receive dividend
+    function balanceOf(address who) public constant returns (uint256);
+    function transfer(address to, uint256 value) public returns (bool);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    //from: https://github.com/OpenZeppelin/zeppelin-solidity/blob/b395b06b65ce35cac155c13d01ab3fc9d42c5cfb/contracts/token/ERC20.sol
+    function allowance(address owner, address spender) public constant returns (uint256);
+    function transferFrom(address from, address to, uint256 value) public returns (bool);
+    function approve(address spender, uint256 value) public returns (bool);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
 contract ModumToken is ERC20Interface {
@@ -40,8 +39,7 @@ contract ModumToken is ERC20Interface {
     uint256 public totalDropPerUnlockedToken = 0;     //totally airdropped eth per unlocked token
     uint256 public rounding = 0;                      //airdrops not accounted yet to make system rounding error proof
 
-    //Token locked/unlocked/max
-    uint256 public unlockedTokens = 0;                //tokens that can vote, transfer, receive dividend
+    //Token locked/unlocked - totalSupply/max
     uint256 public lockedTokens = 9 * 1100 * 1000;   //token that need to be unlocked by voting
     uint256 public constant maxTokens = 30 * 1000 * 1000;      //max distributable tokens
 
@@ -148,7 +146,7 @@ contract ModumToken is ERC20Interface {
             Account storage account = updateAccount(owner, UpdateMode.Both);
             uint256 valueMod = currentProposal.valueMod;
             account.valueMod = account.valueMod.add(valueMod); //add tokens to owner
-            unlockedTokens = unlockedTokens.add(valueMod);
+            totalSupply = totalSupply.add(valueMod);
             lockedTokens = lockedTokens.sub(valueMod);
         } else if(currentProposal.yay <= currentProposal.nay) {
             //in case of a negative vote, set the time of this negative
@@ -187,7 +185,7 @@ contract ModumToken is ERC20Interface {
         //we want to mint a couple of accounts
         for (uint8 i=0; i<_recipient.length; i++) {
             
-            //require(lockedTokens.add(unlockedTokens).add(_value[i]) <= maxTokens);
+            //require(lockedTokens.add(totalSupply).add(_value[i]) <= maxTokens);
             //do the check in the mintDone
 
             //121 gas can be saved by creating temporary variables
@@ -203,7 +201,7 @@ contract ModumToken is ERC20Interface {
             //if this remains 0, we cannot calculate the time period when the user claimed
             //his airdrop, thus, set it to now
             account.lastAirdropClaimTime = now;
-            unlockedTokens = unlockedTokens.add(tmpValue); //create the tokens and add to recipient
+            totalSupply = totalSupply.add(tmpValue); //create the tokens and add to recipient
             Minted(tmpRecipient, tmpValue);
         }
     }
@@ -213,7 +211,7 @@ contract ModumToken is ERC20Interface {
         require(!mintDone); //only in minting phase
         //here we check that we never exceed the 30mio max tokens. This includes
         //the locked and the unlocked tokens.
-        require(lockedTokens.add(unlockedTokens) <= maxTokens);
+        require(lockedTokens.add(totalSupply) <= maxTokens);
         mintDone = true; //end the minting
     }
 
@@ -267,8 +265,8 @@ contract ModumToken is ERC20Interface {
     
     function payout(uint256 valueWei) internal {
         uint256 value = valueWei.add(rounding); //add old rounding
-        rounding = value % unlockedTokens; //ensure no rounding error
-        uint256 weiPerToken = value.sub(rounding).div(unlockedTokens);
+        rounding = value % totalSupply; //ensure no rounding error
+        uint256 weiPerToken = value.sub(rounding).div(totalSupply);
         totalDropPerUnlockedToken = totalDropPerUnlockedToken.add(weiPerToken); //account for locked tokens and add the drop
         Payout(weiPerToken);
     }
@@ -297,12 +295,6 @@ contract ModumToken is ERC20Interface {
     }
 
     //****************************** ERC20 ************************************
-
-    // Get the total token supply
-    //locked tokens do not count for the total supply: locked tokens cannot vote, tranfer, or claim bonus
-    function totalSupply() constant returns (uint256) {
-        return unlockedTokens;
-    }
 
     // Get the account balance of another account with address _owner
     function balanceOf(address _owner) constant returns (uint256 balance) {
