@@ -71,7 +71,7 @@ contract ModumToken is ERC20Interface {
     event Payout(uint256 weiPerToken); //called when an someone payed ETHs to this contract, that can be distributed
     event Minted(address _addr, uint256 tokens); //called when a specific address has been minted
 
-    function ModumToken() {
+    function ModumToken() public {
         owner = msg.sender;
     }
 
@@ -81,7 +81,7 @@ contract ModumToken is ERC20Interface {
      * soon as an exploit becomes known, the affected parties might have a small time
      * window before being attacked.
      */
-    function transferOwnership(address _newOwner) {
+    function transferOwnership(address _newOwner) public {
         require(msg.sender == owner);
         require(_newOwner != address(0));
         owner = _newOwner;
@@ -92,7 +92,7 @@ contract ModumToken is ERC20Interface {
      * In addition to the the vode with address/URL and its hash, we also set the value
      * of tokens to be transfered from the locked tokens to the modum account.
      */
-    function votingProposal(string _addr, bytes32 _hash, uint256 _value) {
+    function votingProposal(string _addr, bytes32 _hash, uint256 _value) public {
         require(msg.sender == owner); // proposal ony by onwer
         require(!isProposalActive()); // no proposal is active, cannot vote in parallel
         require(_value <= lockedTokens); //proposal cannot be larger than remaining locked tokens
@@ -108,7 +108,7 @@ contract ModumToken is ERC20Interface {
         currentProposal = Proposal(_addr, _hash, _value, now, 0, 0);
     }
 
-    function vote(bool _vote) returns (uint256) {
+    function vote(bool _vote) public returns (uint256) {
         require(isVoteOngoing()); // vote needs to be ongoing
         Account storage account = updateAccount(msg.sender, UpdateMode.Vote);
         uint256 votes = account.valueModVote; //available votes
@@ -126,7 +126,7 @@ contract ModumToken is ERC20Interface {
         return votes;
     }
 
-    function showVotes(address _addr) constant returns (uint256) {
+    function showVotes(address _addr) public constant returns (uint256) {
         Account memory account = accounts[_addr];
         if(account.lastProposalStartTime < currentProposal.startTime || // the user did set his token power yet
             (account.lastProposalStartTime == 0 && currentProposal.startTime == 0)) {
@@ -136,7 +136,7 @@ contract ModumToken is ERC20Interface {
     }
 
     // The voting can be claimed by the owner of this contract
-    function claimVotingProposal() {
+    function claimVotingProposal() public {
         require(msg.sender == owner); //only owner can claim proposal
         require(isProposalActive()); // proposal active
         require(isVotingPhaseOver()); // voting has already ended
@@ -157,11 +157,11 @@ contract ModumToken is ERC20Interface {
         delete currentProposal; //proposal ended
     }
 
-    function isProposalActive() constant returns (bool)  {
+    function isProposalActive() public constant returns (bool)  {
         return currentProposal.hash != bytes32(0);
     }
 
-    function isVoteOngoing() constant returns (bool)  {
+    function isVoteOngoing() public constant returns (bool)  {
         return isProposalActive()
             && now >= currentProposal.startTime
             && now < currentProposal.startTime.add(votingDuration);
@@ -169,14 +169,14 @@ contract ModumToken is ERC20Interface {
         //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
     }
 
-    function isVotingPhaseOver() constant returns (bool)  {
+    function isVotingPhaseOver() public constant returns (bool)  {
         //its safe to use it for longer periods:
         //https://ethereum.stackexchange.com/questions/6795/is-block-timestamp-safe-for-longer-time-periods
         return now >= currentProposal.startTime.add(votingDuration);
     }
 
     //*********************** Minting *****************************************
-    function mint(address[] _recipient, uint256[] _value)  {
+    function mint(address[] _recipient, uint256[] _value) public {
         require(msg.sender == owner); //only owner can claim proposal
         require(!mintDone); //only during minting
         //require(_recipient.length == _value.length); //input need to be of same size
@@ -206,7 +206,7 @@ contract ModumToken is ERC20Interface {
         }
     }
 
-    function setMintDone() {
+    function setMintDone() public {
         require(msg.sender == owner);
         require(!mintDone); //only in minting phase
         //here we check that we never exceed the 30mio max tokens. This includes
@@ -241,14 +241,14 @@ contract ModumToken is ERC20Interface {
     //default function to pay bonus, anybody that sends eth to this contract will distribute the wei
     //to their token holders
     //Dividend payment / Airdrop
-    function() payable {
+    function() public payable {
         require(mintDone); //minting needs to be over
         payout(msg.value);
     }
     
     //anybody can pay and add address that will be checked if they
     //can be added to the bonus
-    function payBonus(address[] _addr) payable {
+    function payBonus(address[] _addr) public payable {
         uint256 totalWei = 0;
         for (uint8 i=0; i<_addr.length; i++) {
             Account storage account = updateAccount(_addr[i], UpdateMode.Wei);
@@ -257,7 +257,7 @@ contract ModumToken is ERC20Interface {
                 account.bonusWei = 0;
                 account.lastAirdropClaimTime = now;
             } else {
-                throw;
+                revert();
             }
         }
         payout(msg.value.add(totalWei));
@@ -271,7 +271,7 @@ contract ModumToken is ERC20Interface {
         Payout(weiPerToken);
     }
 
-    function showBonus(address _addr) constant returns (uint256) {
+    function showBonus(address _addr) public constant returns (uint256) {
         uint256 bonus = totalDropPerUnlockedToken.sub(accounts[_addr].lastAirdropWei);
         if(bonus != 0) {
             return accounts[_addr].bonusWei.add(bonus.mul(accounts[_addr].valueMod));
@@ -279,7 +279,7 @@ contract ModumToken is ERC20Interface {
         return accounts[_addr].bonusWei;
     }
 
-    function claimBonus() returns (uint256) {
+    function claimBonus() public returns (uint256) {
         require(mintDone); //minting needs to be over
 
         Account storage account = updateAccount(msg.sender, UpdateMode.Wei);
@@ -297,12 +297,12 @@ contract ModumToken is ERC20Interface {
     //****************************** ERC20 ************************************
 
     // Get the account balance of another account with address _owner
-    function balanceOf(address _owner) constant returns (uint256 balance) {
+    function balanceOf(address _owner) public constant returns (uint256 balance) {
         return accounts[_owner].valueMod;
     }
 
     // Send _value amount of tokens to address _to
-    function transfer(address _to, uint256 _value) returns (bool success) {
+    function transfer(address _to, uint256 _value) public returns (bool success) {
         require(mintDone);
         require(_value > 0);
         Account memory tmpFrom = accounts[msg.sender];
@@ -317,7 +317,7 @@ contract ModumToken is ERC20Interface {
     }
 
     // Send _value amount of tokens from address _from to address _to
-    function transferFrom(address _from, address _to, uint256 _value) returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
         require(mintDone);
         require(_value > 0);
         Account memory tmpFrom = accounts[_from];
@@ -343,7 +343,7 @@ contract ModumToken is ERC20Interface {
      * @param _spender The address which will spend the funds.
      * @param _value The amount of tokens to be spent.
      */
-    function approve(address _spender, uint256 _value) returns (bool) {
+    function approve(address _spender, uint256 _value) public returns (bool) {
         // To change the approve amount you first have to reduce the addresses`
         //  allowance to zero by calling `approve(_spender, 0)` if it is not
         //  already 0 to mitigate the race condition described here:
@@ -361,7 +361,7 @@ contract ModumToken is ERC20Interface {
      * @param _spender address The address which will spend the funds.
      * @return A uint256 specifying the amount of tokens still available for the spender.
      */
-    function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+    function allowance(address _owner, address _spender) public constant returns (uint256 remaining) {
         return allowed[_owner][_spender];
     }
 
@@ -371,13 +371,13 @@ contract ModumToken is ERC20Interface {
      * the first transaction is mined)
      * From MonolithDAO Token.sol
      */
-    function increaseApproval(address _spender, uint256 _addedValue) returns (bool success) {
+    function increaseApproval(address _spender, uint256 _addedValue) public returns (bool success) {
         allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
         Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
         return true;
     }
 
-    function decreaseApproval(address _spender, uint256 _subtractedValue) returns (bool success) {
+    function decreaseApproval(address _spender, uint256 _subtractedValue) public returns (bool success) {
         uint256 oldValue = allowed[msg.sender][_spender];
         if(_subtractedValue > oldValue) {
             allowed[msg.sender][_spender] = 0;
