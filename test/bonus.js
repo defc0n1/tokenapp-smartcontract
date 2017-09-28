@@ -94,7 +94,9 @@ contract('ModumToken', function (accounts) {
         }).then(function (retVal) {
             assert.equal(false, "cannot call internal function");
         }).catch(function (e) {
-            return contract.payBonus([accounts[1], accounts[2]], {value: 499999, from: accounts[0]});
+            return contract.payBonus([accounts[1], accounts[2]], {value: 499998, from: accounts[0]});
+        }).then(function (retVal) {
+            return contract.send(1);
         }).then(function (retVal) {
             return utils.claimAndTestBonus(contract, accounts[0], 500000);
         }).catch((err) => { throw new Error(err) });
