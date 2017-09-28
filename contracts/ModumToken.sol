@@ -105,7 +105,7 @@ contract ModumToken is ERC20Interface {
         //in case of negative vote, wait 90 days. If no lastNegativeVoting have
         //occured, lastNegativeVoting is 0 and now is always larger than 14.1.1970
         //(1.1.1970 plus blockingDuration).
-        require(now > lastNegativeVoting.add(blockingDuration));
+        require(now >= lastNegativeVoting.add(blockingDuration));
 
         currentProposal = Proposal(_addr, _hash, _value, now, 0, 0);
     }
