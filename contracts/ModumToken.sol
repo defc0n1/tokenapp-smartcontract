@@ -243,12 +243,14 @@ contract ModumToken is ERC20Interface {
     //Dividend payment / Airdrop
     function() public payable {
         require(mintDone); //minting needs to be over
+        require(msg.sender == owner); //ETH payment need to be one-way only, from modum to tokenholders, confirmed by Lykke
         payout(msg.value);
     }
     
     //anybody can pay and add address that will be checked if they
     //can be added to the bonus
     function payBonus(address[] _addr) public payable {
+        require(msg.sender == owner);  //ETH payment need to be one-way only, from modum to tokenholders, confirmed by Lykke
         uint256 totalWei = 0;
         for (uint8 i=0; i<_addr.length; i++) {
             Account storage account = updateAccount(_addr[i], UpdateMode.Wei);
