@@ -69,7 +69,6 @@ contract ModumToken is ERC20Interface {
 
     event Voted(address _addr, bool option, uint256 votes); //called when a vote is casted
     event Payout(uint256 weiPerToken); //called when an someone payed ETHs to this contract, that can be distributed
-    event Minted(address _addr, uint256 tokens); //called when a specific address has been minted
 
     function ModumToken() public {
         owner = msg.sender;
@@ -202,7 +201,7 @@ contract ModumToken is ERC20Interface {
             //his airdrop, thus, set it to now
             account.lastAirdropClaimTime = now;
             totalSupply = totalSupply.add(tmpValue); //create the tokens and add to recipient
-            Minted(tmpRecipient, tmpValue);
+            Transfer(msg.sender, tmpRecipient, tmpValue);
         }
     }
 
