@@ -167,4 +167,21 @@ contract('ModumToken', function (accounts) {
         }).catch((err) => { throw new Error(err) });
     });
 
+    it("milestones tests", function () {
+        return ModumToken.deployed().then(function (instance) {
+        }).then(function (retVal) {
+            return utils.testMint(contract, accounts, 0, 1001, 1000)
+        }).then(function (retVal) {
+            return utils.testVote(contract, accounts, 900000, 1001, 1000, 0, true, false, 900000);
+        }).then(function (retVal) {
+            return utils.testVote(contract, accounts, 3000000, 1001, 1000, 0, true, false, 3900000);
+        }).then(function (retVal) {
+            return utils.testVote(contract, accounts, 3000000, 1001, 1000, 0, true, false, 6900000);
+        }).then(function (retVal) {
+            return utils.testVote(contract, accounts, 3000000, 1001, 1000, 0, true, false, 9900000);
+        }).then(function (retVal) {
+            return utils.testTokens(contract, accounts, 0, 9900000 + 2001, 9900000, 1001);
+        }).catch((err) => { throw new Error(err) });
+    });
+
 });
