@@ -330,7 +330,7 @@ contract ModumToken is ERC20Interface {
         from.valueMod = from.valueMod.sub(_value);
         to.valueMod = to.valueMod.add(_value);
         allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
-        Transfer(msg.sender, _to, _value);
+        Transfer(_from, _to, _value);
         return true;
     }
 
