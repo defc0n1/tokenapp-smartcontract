@@ -15,20 +15,12 @@ contract('ModumToken', function (accounts) {
             });
     });
 
-    const evmThrewError = (err) => {
-        if (err.toString().includes('VM Exception while executing eth_call: invalid opcode')) {
+    const evmThrewRevertError = (err) => {
+        if (err.toString().includes('Error: VM Exception while processing transaction: revert')) {
             return true
         }
         return false
     }
-    const evmTxThrewError = (err) => {
-        if (err.toString().includes('VM Exception while processing transaction: invalid opcode')) {
-            return true
-        }
-        return false
-    }
-
-
 
     //************************** TEST ERC20 - the smart contract code is copy&paste from reliable sources ************
     it("test ERC20 basic functionality", function () {
@@ -145,7 +137,7 @@ contract('ModumToken', function (accounts) {
         }).then(function (result) {
             assert(false, 'The preceding call should have thrown an error.')
         }).catch((err) => {
-            assert(evmThrewError(err), 'the EVM did not throw an error or did not ' +
+            assert(evmThrewRevertError(err), 'the EVM did not throw an error or did not ' +
         'throw the expected error')
     })
     })
@@ -158,7 +150,7 @@ contract('ModumToken', function (accounts) {
             }).then(function (result) {
             assert(false, 'The preceding call should have thrown an error.')
         }).catch((err) => {
-            assert(evmThrewError(err), 'the EVM did not throw an error or did not ' +
+            assert(evmThrewRevertError(err), 'the EVM did not throw an error or did not ' +
                 'throw the expected error')})
     })
 
@@ -274,7 +266,7 @@ contract('ModumToken', function (accounts) {
         }).then(function (result) {
             assert(false, 'The preceding call should have thrown an error.')
         }).catch((err) => {
-            assert(evmThrewError(err), 'the EVM did not throw an error or did not ' +
+            assert(evmThrewRevertError(err), 'the EVM did not throw an error or did not ' +
         'throw the expected error')
     })
     })
@@ -287,7 +279,7 @@ contract('ModumToken', function (accounts) {
         }).then(function (result) {
             assert(false, 'The preceding call should have thrown an error.')
         }).catch((err) => {
-            assert(evmThrewError(err), 'the EVM did not throw an error or did not ' +
+            assert(evmThrewRevertError(err), 'the EVM did not throw an error or did not ' +
         'throw the expected error')
     })
     })
@@ -306,7 +298,7 @@ contract('ModumToken', function (accounts) {
         }).then(function (result) {
             assert(false, 'The preceding call should have thrown an error.')
         }).catch((err) => {
-            assert(evmThrewError(err), 'the EVM did not throw an error or did not ' +
+            assert(evmThrewRevertError(err), 'the EVM did not throw an error or did not ' +
         'throw the expected error')
     })
     })
@@ -347,7 +339,7 @@ contract('ModumToken', function (accounts) {
         }).then(function (result) {
             assert(false, 'The preceding call should have thrown an error.')
         }).catch((err) => {
-            assert(evmTxThrewError(err), 'the EVM did not throw an error or did not ' +
+            assert(evmThrewRevertError(err), 'the EVM did not throw an error or did not ' +
                 'throw the expected error:'+err)
         })
     })
